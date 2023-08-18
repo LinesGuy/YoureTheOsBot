@@ -5,7 +5,7 @@ time.sleep(2)
 print("start")
 
 cpu_x, cpu_y = 252, 221 # cpu top left coordinates
-cpu_num = 16 # Number of cpus available
+
 ip_x, ip_y = 252, 357 # Idle processes top left coordinates
 proc_size = 89 # Size of process box including padding, used to locate processes on screen
 ip_w, ip_h = 7, 6 # Idle processes width/height
@@ -15,18 +15,21 @@ pyautogui.PAUSE = 0.01
 
 ram_x, ram_y = 913, 331
 page_w, page_h = 53, 47
-disk_w, disk_h = 16, 6
+disk_w, disk_h = 16, 7
 
 # Hard:
 #disk_x, disk_y = 907, 672
 #ram_w, ram_h = 16, 6
 
+# Harder
+#disk_x, disk_y = 907, 672
+#ram_w, ram_h = 16, 5
+
 # Insane:
 disk_x, disk_y = 907, 576
 ram_w, ram_h = 16, 4
 
-
-
+cpu_num = 16 # Number of cpus available
 
 while True:
     scr = pyautogui.screenshot()
@@ -46,24 +49,25 @@ while True:
                 ram.append(2) # In use
             else:
                 print(f"!!!!!!!!!!!!Unknown ram colour at {dx}, {dy}: {colour}")
-    for dx in range(disk_w):
-        for dy in range(disk_h):
+    pyautogui.PAUSE = 0.005
+    for dy in range(disk_h):
+        for dx in range(disk_w):
             if scr.getpixel((disk_x + page_w * dx, disk_y + page_h * dy)) == (0, 0, 255):
                 # Page to be transferred to ram
-                print(f"Found blue page in disk at {dx}, {dy}")
+                #print(f"Moving blue page in disk at {dx}, {dy}")
                 # Check if there is an empty slot in ram
                 if None in ram:
                     # We can just move the blue page straight into ram then
                     pyautogui.moveTo(disk_x + page_w * dx, disk_y + page_h * dy)
                     pyautogui.leftClick()
                     ram[ram.index(None)] = 2
-                    print("Moved blue page into ram")
+                    #print("Moved blue page into ram")
                 else:
                     # Otherwise, we have to find an unused page in ram to remove
                     s = ram.index(1)
                     rx = s % ram_w
                     ry = s // ram_w
-                    print(f"Found unused page at {rx}, {ry} (index {ram.index(1)}), swapping")
+                    #print(f"Found unused page at {rx}, {ry} (index {ram.index(1)}), swapping")
                     #pyautogui.moveTo(ram_x + page_w * rx, ram_y + page_h * ry)
                     #pyautogui.leftClick()
                     pyautogui.leftClick(ram_x + page_w * rx, ram_y + page_h * ry)
@@ -71,6 +75,7 @@ while True:
                     #pyautogui.moveTo(disk_x + page_w * dx, disk_y + page_h * dy)
                     #pyautogui.leftClick()
                     pyautogui.leftClick(disk_x + page_w * dx, disk_y + page_h * dy)
+    pyautogui.PAUSE = 0.01
     cpus = []
     for n in range(cpu_num):
         colour = scr.getpixel((cpu_x + n * proc_size, cpu_y))
