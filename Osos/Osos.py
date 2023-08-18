@@ -2,16 +2,14 @@
 import pyautogui
 import time
 time.sleep(2)
-print("start")
+print("Starting")
 
 cpu_x, cpu_y = 252, 221 # cpu top left coordinates
 
 ip_x, ip_y = 252, 357 # Idle processes top left coordinates
 proc_size = 89 # Size of process box including padding, used to locate processes on screen
 ip_w, ip_h = 7, 6 # Idle processes width/height
-ldelay = 0
 pyautogui.PAUSE = 0.01
-
 
 ram_x, ram_y = 913, 331
 page_w, page_h = 53, 47
@@ -48,32 +46,25 @@ while True:
             elif colour == (255, 255, 255):
                 ram.append(2) # In use
             else:
-                print(f"!!!!!!!!!!!!Unknown ram colour at {dx}, {dy}: {colour}")
+                print(f"Skipping unknown page in ram at {dx}, {dy} with colour {colour}")
+    # Check for and handle any blue pages (pages where a process needs this page in ram)
     pyautogui.PAUSE = 0.005
     for dy in range(disk_h):
         for dx in range(disk_w):
             if scr.getpixel((disk_x + page_w * dx, disk_y + page_h * dy)) == (0, 0, 255):
-                # Page to be transferred to ram
-                #print(f"Moving blue page in disk at {dx}, {dy}")
                 # Check if there is an empty slot in ram
                 if None in ram:
-                    # We can just move the blue page straight into ram then
+                    # If so, we can just move the blue page straight into ram then
                     pyautogui.moveTo(disk_x + page_w * dx, disk_y + page_h * dy)
                     pyautogui.leftClick()
                     ram[ram.index(None)] = 2
-                    #print("Moved blue page into ram")
                 else:
                     # Otherwise, we have to find an unused page in ram to remove
                     s = ram.index(1)
                     rx = s % ram_w
                     ry = s // ram_w
-                    #print(f"Found unused page at {rx}, {ry} (index {ram.index(1)}), swapping")
-                    #pyautogui.moveTo(ram_x + page_w * rx, ram_y + page_h * ry)
-                    #pyautogui.leftClick()
                     pyautogui.leftClick(ram_x + page_w * rx, ram_y + page_h * ry)
                     ram[s] = 2
-                    #pyautogui.moveTo(disk_x + page_w * dx, disk_y + page_h * dy)
-                    #pyautogui.leftClick()
                     pyautogui.leftClick(disk_x + page_w * dx, disk_y + page_h * dy)
     pyautogui.PAUSE = 0.01
     cpus = []
@@ -94,26 +85,25 @@ while True:
         elif colour == (80, 0, 0):
             cpus.append(6)
         elif colour == (99, 102, 106):
-            cpus.append(None) # This is actually the gray process but we treat it like an empty process
+            # Rare event when a dead process is flying past, ignore it
+            cpus.append(None)
         elif colour == (155, 155, 154):
-            # Idle process, get it out of here
+            # Process is waiting for IO, get it out of here
             pyautogui.moveTo(cpu_x + n * proc_size, cpu_y)
             pyautogui.leftClick()
             cpus.append(None)
-            print("Moved idle process out of CPU")
+            print("Moved IO blocked process out of CPU")
         elif colour == (176, 216, 230):
-            # Finished process, get it out of here
+            # Process is finished, get it out of here
             pyautogui.moveTo(cpu_x + n * proc_size, cpu_y)
             pyautogui.leftClick()
             cpus.append(None)
             print("Cleared finished process")
         elif colour == (0, 0, 255):
-            # Blue process, don't move it, treat it like it shouldn't be moved at all
-            print("Skipping blue process")
+            # Process is waiting for IO, for now we assign it the highest priority so the bot doesn't move it out
             cpus.append(6)
         else:
-            print("!!!!!!!!!!!! Unknown CPU colour:", colour)
-    #print("cpus:", cpus)
+            print("Skipping unknown CPU process colour:", colour)
     
     idles = []
     for y in range(ip_h):
@@ -136,13 +126,15 @@ while True:
             elif colour == (80, 0, 0):
                 idles.append(6)
             elif colour == (99, 102, 106):
-                idles.append(None) # This is actually the gray process but we treat it like an empty process
+                 # Rare event when a dead process (gray) flies past the idle processes, we ignore it since the next frame will almost certainly be back to normal
+                idles.append(None)
             elif colour == (155, 155, 154):
-                # Idle
+                # Process waiting for IO, leave it alone
                 idles.append(None)
             else:
-                print("!!!!!!!!! Unknown idle colour:", colour)
-    #print("idles:", idles)
+                print("Skipping unknown idle process colour:", colour)
+                idles.append(None)
+    
     cpu_index = 0
     for cpu in cpus:
         if cpu is None:
@@ -165,16 +157,5 @@ while True:
                 pyautogui.leftClick()
                 print(f"Moved process with priority {cpu} out of {cpu_index + 1}")
                 idles[idles.index(None)] = cpu
-                #if None in idles:   
-                #else:
-                    #idles.append(c)
-                #i = idles.index(c)
-                #x = i % ip_w
-                #y = i // ip_w
-                #pyautogui.moveTo(ip_x + x * proc_size, ip_y + y * proc_size)
-                #pyautogui.leftClick()
-                #idles[i] = None
-                #print(f"Moved {x}, {y} (index {i}) with priority {c} to {cpu_index + 1}")
                 break
         cpu_index += 1
-    #input("Press enter to continue")
