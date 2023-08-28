@@ -48,25 +48,28 @@ while True:
             else:
                 print(f"Skipping unknown page in ram at {dx}, {dy} with colour {colour}")
     # Check for and handle any blue pages (pages where a process needs this page in ram)
-    pyautogui.PAUSE = 0.005
+    #pyautogui.PAUSE = 0.005
     for dy in range(disk_h):
         for dx in range(disk_w):
             if scr.getpixel((disk_x + page_w * dx, disk_y + page_h * dy)) == (0, 0, 255):
                 # Check if there is an empty slot in ram
+                print(f"Moving blue page from disk: {dx}, {dy}")
                 if None in ram:
                     # If so, we can just move the blue page straight into ram then
-                    pyautogui.moveTo(disk_x + page_w * dx, disk_y + page_h * dy)
-                    pyautogui.leftClick()
+                    pyautogui.leftClick(disk_x + page_w * dx, disk_y + page_h * dy)
                     ram[ram.index(None)] = 2
                 else:
                     # Otherwise, we have to find an unused page in ram to remove
-                    s = ram.index(1)
+                    try:
+                        s = ram.index(1)
+                    except ValueError:
+                        continue
                     rx = s % ram_w
                     ry = s // ram_w
                     pyautogui.leftClick(ram_x + page_w * rx, ram_y + page_h * ry)
                     ram[s] = 2
                     pyautogui.leftClick(disk_x + page_w * dx, disk_y + page_h * dy)
-    pyautogui.PAUSE = 0.01
+    #pyautogui.PAUSE = 0.01
     cpus = []
     for n in range(cpu_num):
         colour = scr.getpixel((cpu_x + n * proc_size, cpu_y))
@@ -136,7 +139,10 @@ while True:
                 idles.append(None)
     
     cpu_index = 0
+    b = False
     for cpu in cpus:
+        if b:
+            pass#break
         if cpu is None:
             for c in range(6, 0, -1):
                 if c not in idles:
@@ -148,8 +154,11 @@ while True:
                 pyautogui.leftClick()
                 idles[i] = None
                 print(f"Moved {x}, {y} to {cpu_index + 1}")
+                b = True
                 break
         else:
+            if None in cpus:
+                continue
             for c in range(6, cpu, -1):
                 if c not in idles:
                     continue
@@ -157,5 +166,6 @@ while True:
                 pyautogui.leftClick()
                 print(f"Moved process with priority {cpu} out of {cpu_index + 1}")
                 idles[idles.index(None)] = cpu
+                b = True
                 break
         cpu_index += 1
